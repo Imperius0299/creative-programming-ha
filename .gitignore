@@ -47,4 +47,8 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
+ *.csv
+ *.xlsx
 
+# weather data
+weather_data_arkona/

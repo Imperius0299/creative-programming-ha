@@ -17,6 +17,8 @@
     "@tensorflow/tfjs": "^2.7.0",
     "@tensorflow/tfjs-vis": "^1.4.3",
     "core-js": "^3.8.1",
-    "express": "^4.17.1"
+    "csv": "^5.3.2",
+    "express": "^4.17.1",
+    "fs": "0.0.1-security"
   }
 }
