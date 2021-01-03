@@ -15,7 +15,7 @@ $(document).ready(function () {
 
     const output_layer_shape = rnn_output_neurons;
     const output_layer_neurons = 1;
-    const numberLayers = 5;
+    const numberLayers = 1;
 
 
 
@@ -134,7 +134,7 @@ $(document).ready(function () {
     async function trainModel(model, inputs, outputs) {
         
         model.compile({
-            optimizer: tf.train.adam(),
+            optimizer: tf.train.rmsprop(0.02),
             loss: tf.losses.meanSquaredError,
             metrics: ['mse','accuracy'],
         })
