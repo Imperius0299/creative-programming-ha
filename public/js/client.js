@@ -1,7 +1,7 @@
 'use strict'
 //import * as data from '../../weather_data_arkona/daily_data/daily_weather_data.json'
 
-$(document).ready(function () {
+$(document).ready(function () {    
     const inputLayerNeurons = 20;
     const inputLayerShape = 20;
 
@@ -17,7 +17,19 @@ $(document).ready(function () {
     const output_layer_neurons = 1;
     const numberLayers = 1;
 
+    async function getUserInput() {
+        let optimizer = await $('#optimizer').val()
+        let epochs = await $('#epochs').val()
+        let learningRate = await $('#learningRate').val()
 
+        let userInput = {
+                        'optimizer' : optimizer,
+                        'epochs' : parseInt(epochs),
+                        'learningRate' : parseFloat(learningRate)
+                        }
+            //console.log(typeof(optimizer),typeof(userInput.epochs), typeof(learningRate))
+        return userInput
+    }
 
     async function fetchData() {
         let trainData = []
@@ -132,16 +144,36 @@ $(document).ready(function () {
     }
 
     async function trainModel(model, inputs, outputs) {
+        let userInput = await getUserInput()
+        let optimizer;
         
+        let getOptimizer = (userInput) => {
+            let learningRate = userInput.learningRate
+            switch (userInput.optimizer) {
+                case "RMSProp":
+                    return tf.train.rmsprop(learningRate)
+                    break;
+            
+                case "Adam":
+                    return tf.train.adam(learningRate)
+                    break;
+                
+                case "Stochastic Gradient Decent":
+                    return tf.train.sgd(learningRate)
+                    break;
+            }
+        }
         model.compile({
-            optimizer: tf.train.rmsprop(0.02),
+            //optimizer: tf.train.rmsprop(0.02),
+            optimizer: getOptimizer(userInput),
             loss: tf.losses.meanSquaredError,
             metrics: ['mse','accuracy'],
         })
         // console.log(inputs.print())
         // console.log(outputs.print())
         const batchSize = 40
-        const epochs = 20
+        //const epochs = 20
+        const epochs = userInput.epochs
 
         return await model.fit(inputs, outputs, {
             batchSize,
@@ -232,5 +264,9 @@ $(document).ready(function () {
 
         showPlot(data, prediction)
     }
-    run()
+    
+    $("#actiontrain").on("click", () => {
+        run();
+    })
+    //run()
 });
