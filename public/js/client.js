@@ -2,19 +2,7 @@
 //import * as data from '../../weather_data_arkona/daily_data/daily_weather_data.json'
 
 $(document).ready(function () {    
-    const inputLayerNeurons = 20;
-    const inputLayerShape = 20;
 
-    const rnn_input_layer_features = 20;
-    const rnn_input_layer_timesteps = inputLayerNeurons / rnn_input_layer_features;
-
-    const rnn_input_shape  = [rnn_input_layer_timesteps, rnn_input_layer_features];
-    const rnn_output_neurons = 1;
-
-    const rnn_batch_size = 32;
-
-    const output_layer_shape = rnn_output_neurons;
-    const output_layer_neurons = 1;
     const numberLayers = 1;
 
     //User Input aus Feldern bekommen
@@ -23,7 +11,7 @@ $(document).ready(function () {
         let epochs = await $('#epochs').val()
         let learningRate = await $('#learningRate').val()
         let date = await $('#datePicker').val()
-           //console.log(date)
+
         return {
             'optimizer' : optimizer,
             'epochs' : parseInt(epochs),
@@ -32,7 +20,7 @@ $(document).ready(function () {
             }
     }
 
-    //Lade die Wetterdaten aus der JSON Datei
+    //Lade die Wetterdaten aus der JSON Datei und gebe sie zurück
     async function fetchData() {
         let trainData = []
         await $.getJSON("../weather_data_arkona/daily_data/daily_weather_data.json", (data) => {
@@ -41,7 +29,7 @@ $(document).ready(function () {
         return trainData
     }
     
-    //Wandelt die die daten, welche als 8-stelliger Integer gegeben sind in ein Datum um
+    //Wandelt die die daten, welche als 8-stelliger Integer gegeben sind in einen String um, Format: YYYY-MM-DD
     function toDateString(intDate) {
        
         let dateString = intDate.toString()
@@ -50,20 +38,10 @@ $(document).ready(function () {
             month: dateString.substring(4,6),
             day: dateString.substring(6,8)
         }
-        //const date = new Date(dateValues.year, dateValues.month, dateValues.day).toLocaleDateString('de-DE')
         const formatedDateString = dateValues.year + '-' + dateValues.month + '-' + dateValues.day
-        //console.log(formatedDateString)
         return formatedDateString
     }
 
-    function getDateValues(stringDate){
-        console.log(stringDate)
-        return {
-            year: stringDate.substring(0,4),
-            month: stringDate.substring(5,7),
-            day: stringDate.substring(8,10)
-        }
-    }
     // Erstellt einen Array, welcher die aktuellsten 1000 durschnittlichen Temperaturen enthält. Diese werden hierbei noch aufgrund
     // der Formatierung umgewandelt/geändert
     async function getData() {
@@ -77,12 +55,12 @@ $(document).ready(function () {
         for(let i = cleaned.length; i != 1000; i--){
             cleaned.pop()
         }
-        //console.log(cleaned)
+
         return cleaned
     }
 
     //Erstellt das RNN Model mit den passenden Shapes und LSTM Zellen
-    function createModel(data) {
+    function createModel() {
         const model = tf.sequential()
 
         model.add(tf.layers.dense({units: 20, inputShape:[20]}))
@@ -91,16 +69,14 @@ $(document).ready(function () {
         for(let i = 0; i < numberLayers; i++){
             lstmCells.push(tf.layers.lstmCell({units: 1}))
         }
-        //model.add(tf.layers.dense({units: 20, inputShape: [20]}))
-        
 
+        // Erstellung des RNN
          model.add(tf.layers.rnn({
              cell: lstmCells,
              inputShape: [20,1],
              returnSequences: false
          }))
-        //model.add(tf.layers.lstm({units: 1, inputShape:[20,1]}))  // das alleine funkt halbwegs
-        //model.add(tf.layers.dense({units: 1, activation: 'sigmoid'}));
+
 
         model.add(tf.layers.dense({units: 1, inputShape: [1]}))
 
@@ -115,10 +91,11 @@ $(document).ready(function () {
     //Umwandlung der Daten in die jeweiligen input und output Tensoren, welche für das Training dienen
     //Hierbei weden die letzten 20 Werte entfernt, da immer 20 Werte zur Vorhersage des 21sten Wertes benutzt werden
     //Division der Tensoren mit 10, damit Werte kleiner sind und sich so besser für das Training des Modelss eignen(geringerer Abstand zwischen Werten)
+    //Inputs werden in Reihenfolge getauscht, da der aktuellster Wert für die Vorhersage an erster Stelle im Array steht
     function convertToTensors(data) {
         let x = []
         let y = []
-        //console.log(data)
+
         let tempData = data.map(d => ({
             temp: isString(d.temp_avg) ? parseFloat(d.temp_avg.replace(',','.')) : d.temp_avg,
         }))
@@ -144,16 +121,10 @@ $(document).ready(function () {
                 return y
             })
             const outputs = y.map(d => d.temp)
-             console.log(inputs)
-            // console.log(outputs)
-            const inputTensor = tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10)) //.reshape([inputs.length, inputs[0].length, 1])
+
+            const inputTensor = tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10))
             const outputTensor = tf.tensor2d(outputs, [outputs.length, 1]).div(tf.scalar(10)).reshape([outputs.length,1])
            
-            //const inputTensor1 = tf.tensor2d(inputs, [inputs.length, inputs[0].length]).
-            //console.log(x)
-            //console.log(inputs)
-            console.log(inputTensor.print())
-            console.log(outputTensor.print())
             return {
                 inputs: inputTensor,
                 outputs: outputTensor,
@@ -161,7 +132,7 @@ $(document).ready(function () {
          })
     }
 
-    //Trainieren des Models mit User Werten sowie den Inputs und Outputs, sowie Darstellung der Wpochendurchläufe mit Metriken im Debug Fenster
+    //Trainieren des Models mit User Werten sowie den Inputs und Outputs, sowie Darstellung der Epochendurchläufe mit Metriken im Debug Fenster
     // zur besseren Verfolgung
     async function trainModel(model, inputs, outputs) {
         let userInput = await getUserInput()
@@ -180,15 +151,11 @@ $(document).ready(function () {
             }
         }
         model.compile({
-            //optimizer: tf.train.rmsprop(0.02),
             optimizer: getOptimizer(userInput),
             loss: tf.losses.meanSquaredError,
             metrics: ['mse','accuracy'],
         })
-        // console.log(inputs.print())
-        // console.log(outputs.print())
         const batchSize = 40
-        //const epochs = 20
         const epochs = userInput.epochs
 
         return await model.fit(inputs, outputs, {
@@ -203,12 +170,15 @@ $(document).ready(function () {
     }
 
     //Vorhersage auf Basis des Models und der Trainingsdaten
+    // multiplikation mit 10 um wieder richtige Skalierung zu erhalten
     async function modelPredict(model, inputTensor) {
         const outputs = await model.predict(inputTensor).mul(10)  //div(tf.scalar(10)) bei neuen predictions( inputwerten)
         console.log(outputs)
             return Array.from(outputs.dataSync())
     }
 
+    //Vorhersage der komplett neuen Werte auf Basis der vorherigen Predictions
+    //Werte werden in der Schleife immer wieder angepasst, da Input immer die jeweils neue Prediction enthalten muss um eine neue Vorhersage zu treffen
     async function modelPredictNew(model, predictedValues) {
         let userInput =  await getUserInput()
 
@@ -235,10 +205,7 @@ $(document).ready(function () {
 
             dateIncrement.setDate(dateIncrement.getDate() + 1)
         }
-        //console.log(inputs)
-        //const outputs = await model.predict(tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10))).mul(tf.scalar(10))
-        //console.log(outputs)
-        console.log(outputs, newDates)
+
         return {
             outputs: outputs,
             dates: newDates
@@ -248,7 +215,6 @@ $(document).ready(function () {
     //Darstellung der Ausgangsdaten sowie der Vorhergesagten Daten im Plot. Auf der x-Achse das Datum, auf Y-Achse die Temperatur.
     function showPlot(data, prediction) {
 
-        console.log(data.date)
         const trace1 = {
             type: "scatter",
             mode: "lines",
@@ -278,64 +244,44 @@ $(document).ready(function () {
         Plotly.newPlot('myDiv', dataPlot, layout)
     }
 
+    //Update des Graphen mit den neuen Vorhersagen, eigene Methode da erst Idee auf basis eines neuen Buttons zu nutzen
     function updatePlot(predictionNew) {
-
-        let date = ['2019-01-01']
+        
         const trace3 = {
             type: "scatter",
-            mode: "lines",
-            name: "Temp_pred_new",
+            mode: predictionNew.outputs.length != 1 ? "lines" : "marker",
             line: {
                 color: '#FFA500'
             },
+            name: "Temp_pred_new",
             x: predictionNew.dates,
             y: predictionNew.outputs
         }
 
         Plotly.addTraces('myDiv', trace3)
     }
-    //Auführen aller Funktionen
+
+    //Main Function für den gesamten Durchlauf
     async function run() {
         const data = await getData()
-        // const xs = tf.tidy(() => {
-        //     const xs = tf.scalar(5)
-
-        //     return xs.dataSync()
-        // }) 
+        
         const values = data.map(d => ({
             x: d.date,
             y: d.temp_avg,
         }))
 
-        const model = createModel(data)
+        const model = createModel()
         tfvis.show.modelSummary({name: 'Model Summary'}, model)
 
         const tensorData = convertToTensors(data)
         const {inputs, outputs} = tensorData
-        // console.log(inputs.shape)
-        // inputs.print()
-        // console.log(outputs.shape)
-        // outputs.print()
+
         await trainModel(model, inputs, outputs)
-        console.log('test')
+
 
         const prediction = await modelPredict(model, inputs)
 
         const predictionNew = await modelPredictNew(model, prediction)
-        console.log(predictionNew)
-        //console.log(prediction)
-        // console.log(xs)
-        //convertToTensors(data)
-        // tfvis.render.scatterplot(
-        //     {name: 'Average Temperature Arkona'},
-        //     {values},
-        //     {
-        //         xLabel: 'Date',
-        //         yLabel: 'Temp',
-        //         zoomToFit: true,
-        //         height: 300
-        //     }
-        // )
 
         showPlot(data, prediction)
 
@@ -346,8 +292,8 @@ $(document).ready(function () {
     $("#actiontrain").on("click", () => {
         run();
     })
-    //run()
 
+    // Begrenzung der Auswahl des Datums
     $('#datePicker').prop('min', () => {
         return new Date("2019-01-01 12:00").toJSON().split("T")[0]
     }).prop('max', () => {

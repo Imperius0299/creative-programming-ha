@@ -30,22 +30,22 @@
                 </div>
                 <div class="form-group">
                     <label for="learningRate">Select Learning Rate</label>
-                    <input type="number" id="learningRate" name="learningRate" value="0.02" min="0.01" max="10" step="0.01">
+                    <input type="number" id="learningRate" name="learningRate" value="0.02" min="0.01" max="1" step="0.01">
                 </div>
                 <div class="form-group">
                     <label for="numberEpochs">Number Epochs</label>
-                    <input type="range" id="epochs" name="epochs" value="10" min="1" max="25" 
+                    <input type="range" id="epochs" name="epochs" value="10" min="1" max="50" 
                         oninput="this.nextElementSibling.value = this.value">
                     <output>10</output>
+                </div>
+                <div class="form-group">
+                  <!--input type="number" id="predictionNew" name="predictionNew" value="" -->
+                  <label for="dataPicker">Select Date for Prediction</label>
+                  <input id="datePicker" type="date" value="2019-01-01">
                 </div>
               </form>
               <button id="actiontrain" type="button" class="btn btn-primary btn-lg btn-block">Train Model</button>
             <div id="myDiv"></div>
-            <div>
-              <!--input type="number" id="predictionNew" name="predictionNew" value="" -->
-              <label for="dataPicker">Select Date for Prediction</label>
-              <input id="datePicker" type="date" value="2019-01-01">
-            </div>
         </main>
     </body>
 </html>
