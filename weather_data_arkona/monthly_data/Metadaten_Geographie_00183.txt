@@ -1,0 +1,5 @@
+Stations_id;Stationshoehe;Geogr.Breite;Geogr.Laenge;von_datum;bis_datum;Stationsname
+   183;   42.00; 54.6800; 13.4349;19300101;19460930;Arkona
+   183;   42.00; 54.6800; 13.4349;19461001;20060810;Arkona
+   183;   42.00; 54.6792; 13.4343;20060811;20110903;Arkona
+   183;   42.00; 54.6792; 13.4343;20110904;        ;Arkona
