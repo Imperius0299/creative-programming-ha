@@ -51,4 +51,7 @@ Thumbs.db
  *.xlsx
 
 # weather data
-weather_data_arkona/
+weather_data_arkona/*
+!weather_data_arkona/**/
+weather_data_arkona/daily_data/*
+!weather_data_arkona/daily_data/daily_weather_data.json
