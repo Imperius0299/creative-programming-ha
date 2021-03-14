@@ -22,12 +22,13 @@ $(document).ready(function () {
         let optimizer = await $('#optimizer').val()
         let epochs = await $('#epochs').val()
         let learningRate = await $('#learningRate').val()
-
-            //console.log(typeof(optimizer),typeof(userInput.epochs), typeof(learningRate))
+        let date = await $('#datePicker').val()
+           //console.log(date)
         return {
             'optimizer' : optimizer,
             'epochs' : parseInt(epochs),
-            'learningRate' : parseFloat(learningRate)
+            'learningRate' : parseFloat(learningRate),
+            'date' : date
             }
     }
 
@@ -41,7 +42,7 @@ $(document).ready(function () {
     }
     
     //Wandelt die die daten, welche als 8-stelliger Integer gegeben sind in ein Datum um
-    function toDate(intDate) {
+    function toDateString(intDate) {
        
         let dateString = intDate.toString()
         const dateValues = {
@@ -54,12 +55,21 @@ $(document).ready(function () {
         //console.log(formatedDateString)
         return formatedDateString
     }
+
+    function getDateValues(stringDate){
+        console.log(stringDate)
+        return {
+            year: stringDate.substring(0,4),
+            month: stringDate.substring(5,7),
+            day: stringDate.substring(8,10)
+        }
+    }
     // Erstellt einen Array, welcher die aktuellsten 1000 durschnittlichen Temperaturen enthält. Diese werden hierbei noch aufgrund
     // der Formatierung umgewandelt/geändert
     async function getData() {
         const weatherData =  await fetchData()
         const cleaned = weatherData.map(d => ({
-             date: toDate(d.MESS_DATUM),
+             date: toDateString(d.MESS_DATUM),
              temp_avg: isString(d.TMK) ? parseFloat(d.TMK.replace(',', '.')) : d.TMK,
         }))
         .filter(d => (d.date != null && d.temp_avg != null))
@@ -134,7 +144,7 @@ $(document).ready(function () {
                 return y
             })
             const outputs = y.map(d => d.temp)
-            // console.log(inputs)
+             console.log(inputs)
             // console.log(outputs)
             const inputTensor = tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10)) //.reshape([inputs.length, inputs[0].length, 1])
             const outputTensor = tf.tensor2d(outputs, [outputs.length, 1]).div(tf.scalar(10)).reshape([outputs.length,1])
@@ -199,10 +209,42 @@ $(document).ready(function () {
             return Array.from(outputs.dataSync())
     }
 
+    async function modelPredictNew(model, predictedValues) {
+        let userInput =  await getUserInput()
+
+        let userPickedDate = new Date(userInput.date + " 12:00")
+        let minDate = new Date("2019-01-01 12:00")
+        let dateIncrement = minDate
+
+        let newDates = []
+        let outputs = []
+
+        let predictedValuesArr = predictedValues.slice(0,20)
+        let inputs = [predictedValuesArr]
+
+        while(dateIncrement <= userPickedDate) {
+            console.log('Hello')
+            newDates.push(dateIncrement)
+
+            let output = await model.predict(tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10))).mul(tf.scalar(10))
+            outputs.push(output)
+            predictedValuesArr.unshift(output).pop()
+
+            dateIncrement.setDate(dateIncrement.getDate() + 1)
+        }
+        //console.log(inputs)
+        //const outputs = await model.predict(tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10))).mul(tf.scalar(10))
+        //console.log(outputs)
+        return {
+            outputs: outputs.dataSync(),
+            dates: newDates
+        }
+    }
+
     //Darstellung der Ausgangsdaten sowie der Vorhergesagten Daten im Plot. Auf der x-Achse das Datum, auf Y-Achse die Temperatur.
     function showPlot(data, prediction) {
 
-        
+        console.log(data.date)
         const trace1 = {
             type: "scatter",
             mode: "lines",
@@ -232,6 +274,23 @@ $(document).ready(function () {
         Plotly.newPlot('myDiv', dataPlot, layout)
     }
 
+    function updatePlot(predictionNew) {
+
+        let date = ['2019-01-01']
+        const trace3 = {
+            type: "scatter",
+            mode: "markers",
+            name: "Temp_pred_new",
+            marker: {
+                size: 10,
+                color: '#FFFF00'
+            },
+            x: date,
+            y: predictionNew
+        }
+
+        Plotly.addTraces('myDiv', trace3)
+    }
     //Auführen aller Funktionen
     async function run() {
         const data = await getData()
@@ -259,7 +318,9 @@ $(document).ready(function () {
 
         const prediction = await modelPredict(model, inputs)
 
-        console.log(prediction)
+        const predictionNew = await modelPredictNew(model, prediction)
+        console.log(predictionNew)
+        //console.log(prediction)
         // console.log(xs)
         //convertToTensors(data)
         // tfvis.render.scatterplot(
@@ -274,6 +335,8 @@ $(document).ready(function () {
         // )
 
         showPlot(data, prediction)
+
+        updatePlot(predictionNew)
     }
     
     //Aufüren des gesamten Vorgang nach Klick auf Button
@@ -281,4 +344,10 @@ $(document).ready(function () {
         run();
     })
     //run()
+
+    $('#datePicker').prop('min', () => {
+        return new Date("2019-01-01 12:00").toJSON().split("T")[0]
+    }).prop('max', () => {
+        return new Date("2019-12-31 12:00").toJSON().split("T")[0]
+    })
 });
