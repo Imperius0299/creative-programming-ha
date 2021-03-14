@@ -220,23 +220,27 @@ $(document).ready(function () {
         let outputs = []
 
         let predictedValuesArr = predictedValues.slice(0,20)
-        let inputs = [predictedValuesArr]
 
         while(dateIncrement <= userPickedDate) {
-            console.log('Hello')
-            newDates.push(dateIncrement)
+            //console.log('Hello')
+            let inputs = [predictedValuesArr]
+            newDates.push(dateIncrement.toJSON().split("T")[0])
 
-            let output = await model.predict(tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10))).mul(tf.scalar(10))
-            outputs.push(output)
-            predictedValuesArr.unshift(output).pop()
+            let output = await model.predict(tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10))).mul(tf.scalar(10)).dataSync()
+
+            outputs.push(output[0])
+            predictedValuesArr.unshift(output[0])
+            predictedValuesArr.pop()
+
 
             dateIncrement.setDate(dateIncrement.getDate() + 1)
         }
         //console.log(inputs)
         //const outputs = await model.predict(tf.tensor2d(inputs, [inputs.length, inputs[0].length]).div(tf.scalar(10))).mul(tf.scalar(10))
         //console.log(outputs)
+        console.log(outputs, newDates)
         return {
-            outputs: outputs.dataSync(),
+            outputs: outputs,
             dates: newDates
         }
     }
@@ -279,14 +283,13 @@ $(document).ready(function () {
         let date = ['2019-01-01']
         const trace3 = {
             type: "scatter",
-            mode: "markers",
+            mode: "lines",
             name: "Temp_pred_new",
-            marker: {
-                size: 10,
-                color: '#FFFF00'
+            line: {
+                color: '#FFA500'
             },
-            x: date,
-            y: predictionNew
+            x: predictionNew.dates,
+            y: predictionNew.outputs
         }
 
         Plotly.addTraces('myDiv', trace3)
