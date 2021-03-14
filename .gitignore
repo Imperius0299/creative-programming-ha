@@ -54,4 +54,5 @@ Thumbs.db
 weather_data_arkona/*
 !weather_data_arkona/**/
 weather_data_arkona/daily_data/*
+weather_data_arkona/monthly_data/*
 !weather_data_arkona/daily_data/daily_weather_data.json
