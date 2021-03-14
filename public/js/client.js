@@ -17,20 +17,21 @@ $(document).ready(function () {
     const output_layer_neurons = 1;
     const numberLayers = 1;
 
+    //User Input aus Feldern bekommen
     async function getUserInput() {
         let optimizer = await $('#optimizer').val()
         let epochs = await $('#epochs').val()
         let learningRate = await $('#learningRate').val()
 
-        let userInput = {
-                        'optimizer' : optimizer,
-                        'epochs' : parseInt(epochs),
-                        'learningRate' : parseFloat(learningRate)
-                        }
             //console.log(typeof(optimizer),typeof(userInput.epochs), typeof(learningRate))
-        return userInput
+        return {
+            'optimizer' : optimizer,
+            'epochs' : parseInt(epochs),
+            'learningRate' : parseFloat(learningRate)
+            }
     }
 
+    //Lade die Wetterdaten aus der JSON Datei
     async function fetchData() {
         let trainData = []
         await $.getJSON("../weather_data_arkona/daily_data/daily_weather_data.json", (data) => {
@@ -39,6 +40,7 @@ $(document).ready(function () {
         return trainData
     }
     
+    //Wandelt die die daten, welche als 8-stelliger Integer gegeben sind in ein Datum um
     function toDate(intDate) {
        
         let dateString = intDate.toString()
@@ -52,7 +54,8 @@ $(document).ready(function () {
         //console.log(formatedDateString)
         return formatedDateString
     }
-
+    // Erstellt einen Array, welcher die aktuellsten 1000 durschnittlichen Temperaturen enthält. Diese werden hierbei noch aufgrund
+    // der Formatierung umgewandelt/geändert
     async function getData() {
         const weatherData =  await fetchData()
         const cleaned = weatherData.map(d => ({
@@ -68,6 +71,7 @@ $(document).ready(function () {
         return cleaned
     }
 
+    //Erstellt das RNN Model mit den passenden Shapes und LSTM Zellen
     function createModel(data) {
         const model = tf.sequential()
 
@@ -93,10 +97,14 @@ $(document).ready(function () {
         return model
     }
 
+    // Prüft ob es sich um einen String handelt
     function isString(x) {
         return Object.prototype.toString.call(x) === "[object String]"
     }
 
+    //Umwandlung der Daten in die jeweiligen input und output Tensoren, welche für das Training dienen
+    //Hierbei weden die letzten 20 Werte entfernt, da immer 20 Werte zur Vorhersage des 21sten Wertes benutzt werden
+    //Division der Tensoren mit 10, damit Werte kleiner sind und sich so besser für das Training des Modelss eignen(geringerer Abstand zwischen Werten)
     function convertToTensors(data) {
         let x = []
         let y = []
@@ -143,24 +151,22 @@ $(document).ready(function () {
          })
     }
 
+    //Trainieren des Models mit User Werten sowie den Inputs und Outputs, sowie Darstellung der Wpochendurchläufe mit Metriken im Debug Fenster
+    // zur besseren Verfolgung
     async function trainModel(model, inputs, outputs) {
         let userInput = await getUserInput()
-        let optimizer;
         
         let getOptimizer = (userInput) => {
             let learningRate = userInput.learningRate
             switch (userInput.optimizer) {
                 case "RMSProp":
                     return tf.train.rmsprop(learningRate)
-                    break;
             
                 case "Adam":
                     return tf.train.adam(learningRate)
-                    break;
                 
                 case "Stochastic Gradient Decent":
                     return tf.train.sgd(learningRate)
-                    break;
             }
         }
         model.compile({
@@ -186,11 +192,14 @@ $(document).ready(function () {
         })
     }
 
+    //Vorhersage auf Basis des Models und der Trainingsdaten
     async function modelPredict(model, inputTensor) {
         const outputs = await model.predict(inputTensor).mul(10)  //div(tf.scalar(10)) bei neuen predictions( inputwerten)
-
+        console.log(outputs)
             return Array.from(outputs.dataSync())
     }
+
+    //Darstellung der Ausgangsdaten sowie der Vorhergesagten Daten im Plot. Auf der x-Achse das Datum, auf Y-Achse die Temperatur.
     function showPlot(data, prediction) {
 
         
@@ -222,6 +231,8 @@ $(document).ready(function () {
         }
         Plotly.newPlot('myDiv', dataPlot, layout)
     }
+
+    //Auführen aller Funktionen
     async function run() {
         const data = await getData()
         // const xs = tf.tidy(() => {
@@ -265,6 +276,7 @@ $(document).ready(function () {
         showPlot(data, prediction)
     }
     
+    //Aufüren des gesamten Vorgang nach Klick auf Button
     $("#actiontrain").on("click", () => {
         run();
     })
